@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Витрувий — лист персонажа</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Russo+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b10; --panel:rgba(14,17,26,.92); --hero:#fcee0a; --heroT:#0a0b10;
+  --y:#fcee0a; --c:#00f0ff; --r:#ff003c; --t:#e6f7ff; --m:#8a98ad;
+  --line:rgba(0,240,255,.38); --grid:rgba(0,240,255,.06); --glow:0 0 2mm rgba(252,238,10,.7);
+}
+/* Режим экономии чернил: белый фон, чёрные линии */
+body.ink{
+  --bg:#fff; --panel:#fff; --hero:#fff; --heroT:#111;
+  --y:#111; --c:#333; --r:#111; --t:#111; --m:#555;
+  --line:#888; --grid:transparent; --glow:none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#05060a}
+body.ink{background:#d8d8d8}
+body{font-family:"Exo 2",system-ui,sans-serif;color:var(--t);font-size:3.2mm;line-height:1.25}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+fieldset{border:0;min-width:0}
+
+/* ---------- Панель инструментов (только экран) ---------- */
+.toolbar{position:sticky;top:0;z-index:20;display:flex;gap:3mm;justify-content:center;padding:3mm;background:#05060a;border-bottom:.3mm solid rgba(0,240,255,.38)}
+.btn{font:700 3.4mm "JetBrains Mono",monospace;color:#0a0b10;background:#fcee0a;border:0;padding:2mm 5mm;cursor:pointer;
+  clip-path:polygon(0 0,calc(100% - 2.5mm) 0,100% 2.5mm,100% 100%,2.5mm 100%,0 calc(100% - 2.5mm))}
+.btn.alt{background:#00f0ff}
+.btn[aria-pressed="true"]{background:#fff}
+.btn:focus-visible{outline:.6mm solid #fff;outline-offset:.6mm}
+.scan{pointer-events:none;position:fixed;inset:0;z-index:15;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+body.ink .scan{display:none}
+
+/* ---------- Лист A4 фиксированной высоты ---------- */
+.page{width:210mm;height:297mm;margin:8mm auto;padding:9mm 9mm 6mm;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;gap:3mm;
+  background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:6mm 6mm;box-shadow:0 0 6mm rgba(0,240,255,.15)}
+.page>*{flex-shrink:0}
+.page>.grow{flex:1 1 0;min-height:0}
+
+/* ---------- Панели со скошенными углами ---------- */
+.panel{position:relative;background:var(--panel);border:.3mm solid var(--line);border-left:1mm solid var(--y);padding:2.5mm 3mm;
+  clip-path:polygon(0 0,calc(100% - 3.5mm) 0,100% 3.5mm,100% 100%,3.5mm 100%,0 calc(100% - 3.5mm));
+  display:flex;flex-direction:column;gap:1.5mm;min-height:0}
+.panel.red{border-left-color:var(--r)}
+.panel.cyan{border-left-color:var(--c)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:2mm;font-family:"Russo One",sans-serif;font-size:3.5mm;
+  color:var(--y);letter-spacing:.25mm;text-transform:uppercase}
+.ph.sub{font-size:2.9mm;color:var(--t)}
+.tag{font:400 2.5mm "JetBrains Mono",monospace;color:var(--c);letter-spacing:0}
+.hint{font-size:2.6mm;color:var(--m)}
+
+/* ---------- Поля ввода ---------- */
+.f{width:100%;min-width:0;background:transparent;border:0;border-bottom:.25mm dashed var(--line);color:var(--t);
+  font:inherit;font-size:3.3mm;padding:.3mm 1mm;height:100%;max-height:7mm;border-radius:0}
+.f:focus{outline:.4mm solid var(--y);outline-offset:0;background:rgba(252,238,10,.06)}
+textarea.f{resize:none;max-height:none;border:.25mm dashed var(--line);line-height:4.6mm;padding:1mm 1.5mm}
+.f::placeholder{color:var(--m);opacity:.7}
+
+/* ---------- Шапка ---------- */
+.hero{display:grid;grid-template-columns:1fr 76mm;gap:3mm;height:40mm}
+.hero-main{background:var(--hero);color:var(--heroT);padding:3mm 4mm;border:.4mm solid var(--heroT);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 6mm),calc(100% - 6mm) 100%,0 100%);
+  display:flex;flex-direction:column;justify-content:space-between}
+.sys{font:700 2.6mm "JetBrains Mono",monospace;letter-spacing:.3mm}
+.glitch{font-family:"Russo One",sans-serif;font-size:14mm;line-height:1;letter-spacing:.5mm;position:relative;isolation:isolate}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;left:0;top:0;z-index:-1}
+.glitch::before{color:var(--r);transform:translate(-.7mm,0);clip-path:inset(0 0 55% 0);animation:g1 3.2s infinite steps(1)}
+.glitch::after{color:var(--c);transform:translate(.7mm,0);clip-path:inset(50% 0 0 0);animation:g2 2.6s infinite steps(1)}
+@keyframes g1{0%,86%,100%{clip-path:inset(0 0 55% 0);transform:translate(-.7mm,0)}
+  89%{clip-path:inset(15% 0 60% 0);transform:translate(-1.8mm,.3mm)}93%{clip-path:inset(62% 0 8% 0);transform:translate(1.2mm,-.3mm)}}
+@keyframes g2{0%,80%,100%{clip-path:inset(50% 0 0 0);transform:translate(.7mm,0)}
+  83%{clip-path:inset(30% 0 45% 0);transform:translate(1.8mm,-.2mm)}87%{clip-path:inset(5% 0 80% 0);transform:translate(-1.2mm,.2mm)}}
+body.ink .glitch::before,body.ink .glitch::after{display:none}
+.stripe{height:2.5mm;background:repeating-linear-gradient(-45deg,var(--y) 0 2mm,transparent 2mm 4mm)}
+.lf{display:grid;grid-template-columns:13mm 1fr;align-items:end;gap:1mm}
+.lf>span{font:700 2.5mm "JetBrains Mono",monospace;color:var(--c)}
+.barcode{height:7mm;margin-top:auto;
+  background:repeating-linear-gradient(90deg,var(--t) 0 .4mm,transparent .4mm .9mm,var(--t) .9mm 1.7mm,transparent 1.7mm 2.1mm,var(--t) 2.1mm 2.4mm,transparent 2.4mm 3.2mm)}
+
+/* ---------- Уровень персонажа ---------- */
+.row2{display:grid;grid-template-columns:76mm 1fr;gap:3mm;height:30mm}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm}
+.chip{position:relative;display:block;cursor:pointer}
+.chip input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0}
+.chip span{display:flex;justify-content:space-between;padding:1.3mm 2mm;border:.3mm solid var(--line);font:700 2.7mm "JetBrains Mono",monospace;color:var(--t)}
+.chip input:checked+span{background:var(--y);border-color:var(--y);color:var(--bg);box-shadow:var(--glow)}
+.chip input:focus-visible+span{outline:.5mm solid var(--c);outline-offset:.4mm}
+
+/* ---------- Характеристики ---------- */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5mm}
+.stat .desc{font-size:2.6mm;color:var(--m);min-height:6.4mm}
+.ladder{display:flex;gap:2.4mm;align-items:center;padding:1.2mm .8mm}
+.dia{appearance:none;-webkit-appearance:none;width:4mm;height:4mm;border:.35mm solid var(--c);transform:rotate(45deg);
+  background:transparent;cursor:pointer;flex:none;margin:0}
+.dia:checked{background:var(--y);border-color:var(--y);box-shadow:var(--glow)}
+.dia:focus-visible{outline:.5mm solid var(--t);outline-offset:.6mm}
+
+/* ---------- Вдохновение ---------- */
+.insp{flex-direction:row;align-items:center;justify-content:space-between;height:15mm}
+.hex{appearance:none;-webkit-appearance:none;width:9mm;height:7.8mm;margin:0;cursor:pointer;flex:none;
+  clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:var(--line)}
+.hex:checked{background:var(--y)}
+.hex:focus-visible{background:var(--c)}
+.hex:checked:focus-visible{background:#fff}
+body.ink .hex:checked:focus-visible{background:#555}
+
+/* ---------- Нумерованные строки ---------- */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.lines{list-style:none;display:grid;grid-template-rows:repeat(var(--n),1fr);gap:.6mm;flex:1 1 0;min-height:0}
+.lines li{display:grid;grid-template-columns:6mm 1fr;align-items:end;gap:1mm;min-height:0;transition:opacity .2s}
+.num{font:700 2.5mm "JetBrains Mono",monospace;color:var(--c);padding-bottom:.8mm}
+.lines li.locked{opacity:.38}
+.lines li.locked .f{border-bottom-style:dotted}
+
+/* ---------- Заголовок листов 2–3 ---------- */
+.pagehead{display:flex;align-items:center;gap:3mm;height:11mm}
+.pagehead .no{font-family:"Russo One",sans-serif;font-size:6mm;background:var(--hero);color:var(--heroT);border:.4mm solid var(--heroT);
+  padding:.5mm 3mm;clip-path:polygon(0 0,100% 0,100% 70%,80% 100%,0 100%)}
+.pagehead h2{font-family:"Russo One",sans-serif;font-size:5mm;font-weight:400;color:var(--y);letter-spacing:.3mm}
+.pagehead .hint{margin-left:auto;text-align:right}
+
+/* ---------- Домены ---------- */
+.domains{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:3mm}
+.dom-top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:2mm}
+.dom .name{font-family:"Russo One",sans-serif;font-size:3.4mm}
+.dom textarea{height:10.5mm;flex:none}
+
+/* ---------- Таблицы и аспекты ---------- */
+.tbl{display:grid;grid-template-rows:auto repeat(var(--n),1fr);gap:.6mm;flex:1 1 0;min-height:0}
+.tr{display:grid;grid-template-columns:var(--cols);gap:2mm;align-items:end;min-height:0}
+.th{font:700 2.4mm "JetBrains Mono",monospace;color:var(--c)}
+.block-72{height:72mm}
+.block-64{height:64mm}
+.asp-top{display:grid;grid-template-columns:1fr 1fr 18mm;gap:2mm}
+.asp-body{display:grid;grid-template-columns:1fr 1fr;gap:3mm;flex:1 1 0;min-height:0}
+.asp-body>div{display:flex;flex-direction:column;min-height:0;gap:.8mm}
+.scale .tr{--cols:9mm 1fr}
+.scale .val{text-align:center;font:700 3mm "JetBrains Mono",monospace;color:var(--y)}
+.notes textarea{flex:1 1 0;min-height:0;line-height:6mm;
+  background-image:repeating-linear-gradient(transparent 0 calc(6mm - .25mm),var(--line) calc(6mm - .25mm) 6mm);background-attachment:local}
+
+/* ---------- Подвал ---------- */
+.foot{display:flex;justify-content:space-between;font:2.4mm "JetBrains Mono",monospace;color:var(--m);border-top:.25mm solid var(--line);padding-top:1mm}
+
+@media (prefers-reduced-motion:reduce){
+  .glitch::before,.glitch::after{animation:none}
+}
+
+/* ---------- Печать: ровно 3 листа ---------- */
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{background:var(--bg) !important}
+  .toolbar,.scan{display:none !important}
+  .page{margin:0;box-shadow:none;height:296.5mm;break-after:page;page-break-after:always}
+  .page.last{break-after:auto;page-break-after:auto}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .glitch::before,.glitch::after{animation:none}
+  .f::placeholder{color:transparent}
+  .f:focus{outline:none;background:transparent}
+}
+</style>
+</head>
+<body>
+<div class="scan" aria-hidden="true"></div>
+
+<div class="toolbar">
+  <button type="button" class="btn" id="printBtn">ПЕЧАТЬ / PDF</button>
+  <button type="button" class="btn alt" id="inkBtn" aria-pressed="false">ЭКОНОМИЯ ЧЕРНИЛ</button>
+</div>
+
+<main>
+<!-- ================= ЛИСТ 1 ================= -->
+<section class="page" aria-label="Лист 1: персонаж">
+  <header class="hero">
+    <div class="hero-main">
+      <div class="sys" aria-hidden="true">SYS://VITRUVIUM.OS — CHARACTER_SHEET.v2077</div>
+      <h1 class="glitch" data-text="ВИТРУВИЙ">ВИТРУВИЙ</h1>
+      <div class="sys">ЛИСТ ПЕРСОНАЖА // УНИВЕРСАЛЬНАЯ ИГРОВАЯ СИСТЕМА</div>
+    </div>
+    <div class="panel cyan">
+      <div class="ph">Идентификация<span class="tag">NET-ID</span></div>
+      <label class="lf"><span>ИМЯ</span><input class="f"></label>
+      <label class="lf"><span>ИГРОК</span><input class="f"></label>
+      <label class="lf"><span>МИР</span><input class="f"></label>
+      <div class="barcode" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <div class="stripe" aria-hidden="true"></div>
+
+  <div class="row2">
+    <fieldset class="panel">
+      <legend class="sr">Уровень персонажа</legend>
+      <div class="ph" aria-hidden="true">Уровень<span class="tag">TIER</span></div>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="tier" value="3"><span>ОБЫЧНЫЙ<b>3</b></span></label>
+        <label class="chip"><input type="radio" name="tier" value="6"><span>РЕДКИЙ<b>6</b></span></label>
+        <label class="chip"><input type="radio" name="tier" value="9"><span>ВЫДАЮЩИЙСЯ<b>9</b></span></label>
+        <label class="chip"><input type="radio" name="tier" value="12"><span>ЛЕГЕНДАРНЫЙ<b>12</b></span></label>
+      </div>
+    </fieldset>
+    <div class="panel red">
+      <div class="ph"><span id="conceptLbl">Задумка</span><span class="tag">BIO.DAT</span></div>
+      <textarea class="f" style="flex:1 1 0;min-height:0" aria-labelledby="conceptLbl"></textarea>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel insp">
+    <div>
+      <div class="ph">Вдохновение<span class="tag">&nbsp;RAM</span></div>
+      <div class="hint">+1 кубик к броску или +успехи по уровню домена. Максимум 6.</div>
+    </div>
+    <div id="insp"></div>
+  </div>
+
+  <div class="two grow">
+    <div class="panel cyan">
+      <div class="ph">Атрибуты<span class="tag">TRAITS</span></div>
+      <div id="attrs" style="display:flex;flex:1 1 0;min-height:0"></div>
+    </div>
+    <div class="panel">
+      <div class="ph">Имущество<span class="tag">GEAR</span></div>
+      <div id="items" style="display:flex;flex:1 1 0;min-height:0"></div>
+    </div>
+  </div>
+
+  <footer class="foot" aria-hidden="true"><span>VITRUVIUM-OS // NIGHT_SHEET</span><span>ЛИСТ 1/3</span></footer>
+</section>
+
+<!-- ================= ЛИСТ 2 ================= -->
+<section class="page" aria-label="Лист 2: домены и способности">
+  <header class="pagehead">
+    <span class="no" aria-hidden="true">02</span>
+    <h2>ДОМЕНЫ И СПОСОБНОСТИ</h2>
+    <span class="hint">2 способности за уровень домена.<br>Уровень = кубики к броску.</span>
+  </header>
+  <div class="domains grow" id="domains"></div>
+  <footer class="foot" aria-hidden="true"><span>VITRUVIUM-OS // CYBERWARE_SLOTS</span><span>ЛИСТ 2/3</span></footer>
+</section>
+
+<!-- ================= ЛИСТ 3 ================= -->
+<section class="page last" aria-label="Лист 3: статусы, уровни, аспекты">
+  <header class="pagehead">
+    <span class="no" aria-hidden="true">03</span>
+    <h2>СТАТУСЫ · УРОВНИ · АСПЕКТЫ</h2>
+    <span class="hint">Статусы — качество изменений.<br>Уровни — их динамика.</span>
+  </header>
+
+  <div class="two block-72">
+    <div class="panel red">
+      <div class="ph">Статусы<span class="tag">FLAGS</span></div>
+      <div id="statuses" style="display:flex;flex:1 1 0;min-height:0"></div>
+    </div>
+    <div class="panel cyan">
+      <div class="ph">Уровни<span class="tag">COUNTERS</span></div>
+      <div id="levels" style="display:flex;flex:1 1 0;min-height:0"></div>
+    </div>
+  </div>
+
+  <div class="two block-64" id="aspects"></div>
+
+  <div class="panel notes grow">
+    <div class="ph"><span id="notesLbl">Заметки</span><span class="tag">LOG.TXT</span></div>
+    <textarea class="f" aria-labelledby="notesLbl"></textarea>
+  </div>
+
+  <footer class="foot" aria-hidden="true"><span>VITRUVIUM-OS // END_OF_FILE</span><span>ЛИСТ 3/3</span></footer>
+</section>
+</main>
+
+<script>
+// Весь HTML ниже собирается из статичных строк, пользовательский ввод не вставляется.
+const STATS = [
+  ["Телосложение", "BODY",   "Физическая сила, иммунитет и выносливость"],
+  ["Движение",     "REFLEX", "Ловкость, скорость и владение телом"],
+  ["Внимание",     "SENSE",  "Органы чувств, рефлексы и восприятие"],
+  ["Мышление",     "INT",    "Память и интеллект, логика и воображение"],
+  ["Влияние",      "EMP",    "Воздействие на других, эмпатия и обаяние"],
+  ["Воля",         "WILL",   "Сила духа, выдержка и умение владеть собой"]
+];
+
+const pad = n => String(n).padStart(2, "0");
+
+// Ряд отметок уровня (ромбы или шестиугольники)
+function ladder(n, label, cls, on = 0) {
+  let h = `<div class="ladder" role="group" aria-label="${label}">`;
+  for (let i = 1; i <= n; i++) {
+    h += `<input type="checkbox" class="${cls}" aria-label="${label}: ${i}"${i <= on ? " checked" : ""}>`;
+  }
+  return h + "</div>";
+}
+
+// Нумерованный список строк
+function lines(n, label) {
+  let h = `<ol class="lines" style="--n:${n}">`;
+  for (let i = 1; i <= n; i++) {
+    h += `<li><span class="num" aria-hidden="true">${pad(i)}</span><input class="f" aria-label="${label} ${i}"></li>`;
+  }
+  return h + "</ol>";
+}
+
+// Таблица с заголовками колонок
+function table(n, cols, heads, label) {
+  let h = `<div class="tbl" style="--n:${n}"><div class="tr" style="--cols:${cols}" aria-hidden="true">`;
+  heads.forEach(t => h += `<span class="th">${t}</span>`);
+  h += "</div>";
+  for (let i = 1; i <= n; i++) {
+    h += `<div class="tr" style="--cols:${cols}">`;
+    heads.forEach(t => h += `<input class="f" aria-label="${label} ${i}: ${t.toLowerCase()}">`);
+    h += "</div>";
+  }
+  return h + "</div>";
+}
+
+// Лист 1
+document.getElementById("stats").innerHTML = STATS.map(([name, tag, desc]) => `
+  <div class="panel cyan stat">
+    <div class="ph">${name}<span class="tag">${tag}</span></div>
+    <div class="desc">${desc}</div>
+    ${ladder(3, `${name}, уровень`, "dia", 1)}
+  </div>`).join("");
+
+document.getElementById("insp").innerHTML = ladder(6, "Вдохновение", "hex").replace('class="ladder"', 'class="ladder" style="gap:1.5mm"');
+document.getElementById("attrs").innerHTML = lines(12, "Атрибут");
+document.getElementById("items").innerHTML = lines(12, "Предмет");
+
+// Лист 2
+let doms = "";
+for (let i = 1; i <= 6; i++) {
+  doms += `
+  <article class="panel ${i % 2 ? "red" : "cyan"} dom" data-dom>
+    <div class="dom-top">
+      <span class="tag">MOD-${pad(i)}</span>
+      <input class="f name" aria-label="Домен ${i}: название" placeholder="НАЗВАНИЕ ДОМЕНА">
+      ${ladder(3, `Домен ${i}: уровень`, "dia")}
+    </div>
+    <textarea class="f" aria-label="Домен ${i}: описание" placeholder="Описание домена"></textarea>
+    <div class="ph sub">Способности<span class="tag slots">SLOTS 0/6</span></div>
+    ${lines(6, `Домен ${i}: способность`)}
+  </article>`;
+}
+document.getElementById("domains").innerHTML = doms;
+
+// Лист 3
+document.getElementById("statuses").innerHTML = table(10, "1fr 30mm", ["СТАТУС", "НОСИТЕЛЬ"], "Статус");
+document.getElementById("levels").innerHTML = table(10, "1fr 14mm 14mm", ["ПОКАЗАТЕЛЬ", "ЗНАЧ.", "МАКС."], "Уровень");
+
+let asp = "";
+for (let a = 1; a <= 2; a++) {
+  let scale = "";
+  for (let v = 3; v >= -3; v--) {
+    scale += `<div class="tr"><input class="f val" value="${v}" aria-label="Аспект ${a}: значение шкалы">
+      <input class="f" aria-label="Аспект ${a}: описание уровня ${v}"></div>`;
+  }
+  asp += `
+  <div class="panel ${a === 1 ? "" : "red"}">
+    <div class="ph">Аспект ${pad(a)}<span class="tag">CORE.${pad(a)}</span></div>
+    <div class="asp-top">
+      <input class="f" aria-label="Аспект ${a}: название" placeholder="Название">
+      <input class="f" aria-label="Аспект ${a}: объект" placeholder="Кто / что">
+      <input class="f" aria-label="Аспект ${a}: текущий уровень" placeholder="Сейчас">
+    </div>
+    <div class="asp-body">
+      <div class="scale"><span class="th">ШКАЛА</span>${scale}</div>
+      <div><span class="th">СТАТУСЫ</span>${lines(7, `Аспект ${a}: статус`)}</div>
+    </div>
+  </div>`;
+}
+document.getElementById("aspects").innerHTML = asp;
+
+// Слоты способностей: 2 за уровень домена
+function updateDom(d) {
+  const open = d.querySelectorAll(".ladder input:checked").length * 2;
+  d.querySelectorAll(".lines li").forEach((li, j) => li.classList.toggle("locked", j >= open));
+  d.querySelector(".slots").textContent = `SLOTS ${open}/6`;
+}
+document.querySelectorAll("[data-dom]").forEach(updateDom);
+
+// Отметка уровня заполняет все предыдущие ячейки, снятие очищает последующие
+document.addEventListener("change", e => {
+  const box = e.target;
+  if (!box.matches(".ladder input")) return;
+  const boxes = [...box.parentElement.querySelectorAll("input")];
+  const i = boxes.indexOf(box);
+  boxes.forEach((x, j) => { x.checked = box.checked ? j <= i : j < i; });
+  const dom = box.closest("[data-dom]");
+  if (dom) updateDom(dom);
+});
+
+// Панель инструментов
+document.getElementById("printBtn").addEventListener("click", () => window.print());
+document.getElementById("inkBtn").addEventListener("click", e => {
+  const on = document.body.classList.toggle("ink");
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+});
+</script>
+</body>
+</html>
