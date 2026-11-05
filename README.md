@@ -74,8 +74,7 @@
 ```
 .
 ├── vitruvius-sheet.html   # бланк: разметка, стили и скрипт в одном файле
-├── docs/
-│   └── screenshot.png     # снимок для README (по желанию)
+├── screenshot.png     # снимок для README
 └── README.md
 ```
 
